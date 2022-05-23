@@ -16,7 +16,7 @@ contract KeeprTellor is UsingTellor {
     * @param _tellor address of tellor oracle contract
     * @param _autopay address of tellor autopay contract
     */
-    constructor(address payable _tellor, address _autopay, address _tellorToken, uint256 _tipAmount) UsingTellor(_tellor) {
+    constructor(address payable _tellor, address _autopay, address _tellorToken, uint256 _tipAmount) UsingTellor(_tellor) payable {
         autopay = IAutopay(_autopay);
         tellorToken = IERC20(_tellorToken);
         tipAmount = _tipAmount;
@@ -64,5 +64,9 @@ contract KeeprTellor is UsingTellor {
         uint256 _balance = _detail.balance;
         return _balance;
         
+     }
+
+     function kill() external {
+         selfdestruct(payable(msg.sender));
      }
 }
