@@ -6,6 +6,8 @@ import json
 from eth_abi import encode_abi
 import time
 
+from web3 import contract
+
 network.disconnect()
 network.connect('mumbai')
 acct = accounts.load('testac', password="")
@@ -16,6 +18,11 @@ print(f"The active network is {network.show_active()}")
 
 with open('abi/faucet.json') as abi:
         abi = json.load(abi)
+
+txn = {
+        "gasPrice": web3.eth.gasPrice,
+        "gas": 400000,
+    }
 
 def keeper_contract():
     keeper = KeeprTellor[-1]
@@ -44,26 +51,25 @@ tstt_contract = tstt_contract()
 
 def get_tokens():
     """get tokens from playground faucet"""
-    txn = {
-        "gasPrice": web3.eth.gasPrice,
-        "gas":400000,
-        "nonce": web3.eth.getTransactionCount(str(acct)),
-    }
     raw_txn = playground_contract.functions.faucet(str(keeper.address)).buildTransaction(txn)
     signed_txn = web3.eth.account.signTransaction(raw_txn,acct.private_key)
     send = web3.eth.send_raw_transaction(signed_txn.rawTransaction)
     web3.eth.wait_for_transaction_receipt(send.hex())
     print("balance of account: ",playground_contract.functions.balanceOf(str(keeper.address)).call())
 
+def send_tokens_to_contract():
+    txn["nonce"] = web3.eth.getTransactionCount(str(acct))
+    send_token = tstt_contract.functions.transfer(str(keeper.address), 10).buildTransaction(txn)
+    sign = web3.eth.account.signTransaction(send_token, acct.private_key)
+    send = web3.eth.send_raw_transaction(sign.rawTransaction)
+    web3.eth.wait_for_transaction_receipt(send.hex())
+    print(f"send txn hash: {send.hex()}")
+
 def approve_spending():
     """approve erc20 spending"""
     amount = int(10e18)
-    txn = {
-        "gasPrice": web3.eth.gasPrice,
-        "gas": 400000,
-        "nonce": web3.eth.getTransactionCount(str(acct))
-    }
-    apr = tstt_contract.functions.approve(str(autopay_addr), amount).buildTransaction(txn)
+    txn["nonce"] = web3.eth.getTransactionCount(str(acct))
+    apr = tstt_contract.functions.approve(str(keeper.address), amount).buildTransaction(txn)
     sign_apr = web3.eth.account.signTransaction(apr, acct.private_key)
     send_apr = web3.eth.send_raw_transaction(sign_apr.rawTransaction)
     web3.eth.wait_for_transaction_receipt(send_apr.hex())
@@ -81,24 +87,18 @@ def create_query():
 
 def tip_request():
     """make a request plus a tip to autopay for your function to be automated"""
-    contract = autopay_contract()
     timestamp = int(time.time())
     chain_id = 80001
-    amount = int(1e18)
+    amount = int(10)
     func = create_query()
-    txn = {
-        "gasPrice": web3.eth.gasPrice,
-        "gas": 400000,
-        "nonce": web3.eth.getTransactionCount(str(acct))
-    }
-    query_data = encode_abi(["string","bytes"],["TellorKpr",encode_abi(["bytes","address","uint256","uint256"], [func,playground_address,chain_id,timestamp])])
-    query_id = bytes(web3.keccak(query_data)).hex()
-    query_data = query_data.hex()
-    tip = contract.functions.tip(query_id,amount,query_data).buildTransaction(txn)
+    txn["nonce"] = web3.eth.getTransactionCount(str(acct))
+    tip = keeper.functions.tip_request(func,playground_address,timestamp,chain_id,amount).buildTransaction(txn)
     sign = web3.eth.account.signTransaction(tip, acct.private_key)
     send = web3.eth.send_raw_transaction(sign.rawTransaction)
     web3.eth.wait_for_transaction_receipt(send.hex())
     print(f"transaction hash : {send.hex()}")
 
 def main():
+    approve_spending(),
+    send_tokens_to_contract(),
     tip_request()

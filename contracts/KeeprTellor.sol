@@ -9,15 +9,17 @@ contract KeeprTellor is UsingTellor {
 
     IAutopay public autopay;
     IERC20 public tellorToken;
+    uint256 public tipAmount;
     
     /**
     * @dev Initializes parameters
     * @param _tellor address of tellor oracle contract
     * @param _autopay address of tellor autopay contract
     */
-    constructor(address payable _tellor, address _autopay, address _tellorToken) UsingTellor(_tellor) {
+    constructor(address payable _tellor, address _autopay, address _tellorToken, uint256 _tipAmount) UsingTellor(_tellor) {
         autopay = IAutopay(_autopay);
         tellorToken = IERC20(_tellorToken);
+        tipAmount = _tipAmount;
     }
 
     function tip_request(

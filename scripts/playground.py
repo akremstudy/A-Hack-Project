@@ -1,4 +1,4 @@
-from brownie import SampleTellorKpr, accounts, config, network
+from brownie import KeeprTellor, network
 import brownie
 network.disconnect()
 network.connect('mumbai')
@@ -7,7 +7,7 @@ network.is_connected()
 
 def contract_factory():
     print(f"The active network is {network.show_active()}")
-    tellor_keeper = SampleTellorKpr[-1]
+    tellor_keeper = KeeprTellor[-1]
     contract = brownie.web3.eth.contract(tellor_keeper.address, abi=tellor_keeper.abi)
     return contract
 
